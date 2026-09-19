@@ -179,20 +179,20 @@
 
   /* ================================================================
      QUIZ
+     L'écran est construit une seule fois : le champ de réponse n'est jamais
+     recréé, donc il garde le focus (et le clavier mobile reste ouvert).
   ================================================================ */
   function startSession(pool, count) {
     let qs = L.spread(L.shuffle(pool));
     if (count > 0) qs = qs.slice(0, count);
     S = { qs: qs, i: 0, results: [], given: [], validated: false, lock: 0 };
-    renderQuiz();
+    buildShell();
+    showQuestion();
   }
 
-  function renderQuiz() {
-    const q = S.qs[S.i];
-    S.validated = false;
-
+  function buildShell() {
     app.innerHTML =
-      '<section class="quiz">' +
+      '<section class="quiz" id="quiz">' +
         '<div class="quiz-top">' +
           '<button type="button" class="ghost" id="quit">Arrêter</button>' +
           '<div class="count" id="count" aria-live="polite"></div>' +
@@ -202,17 +202,55 @@
         '<div class="stage" id="stage"></div>' +
         '<form class="answer" id="form" autocomplete="off">' +
           '<input id="ans" type="text" placeholder="Ta réponse" aria-label="Ta réponse" ' +
-                 'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">' +
+                 'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' +
           '<button type="submit" class="cta" id="submit">Valider</button>' +
         '</form>' +
-        '<div class="idk-row"><button type="button" class="ghost" id="idk">Je ne sais pas</button></div>' +
+        '<div class="idk-row"><button type="button" class="ghost" id="idk">Je ne sais pas</button>' +
+          '<span class="idk-tip"> ou Entrée avec un champ vide</span></div>' +
         '<div id="fb" aria-live="polite"></div>' +
       '</section>';
 
-    drawBar(); drawCount();
+    const inp = $("ans");
+
+    // Un tap sur un bouton ne doit pas voler le focus au champ (sinon le clavier se ferme).
+    $("quiz").addEventListener("mousedown", function (e) {
+      if (e.target.closest("button")) e.preventDefault();
+    });
+
+    $("form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (S.validated) { next(); return; }
+      const v = inp.value.trim();
+      // Champ vide + Entrée = « je ne sais pas » (compté faux).
+      finish(v ? L.judge(v, S.qs[S.i], INDEX) : "ko", v);
+    });
+    $("idk").addEventListener("click", function () {
+      if (!S.validated) finish("ko", "");
+      inp.focus({ preventScroll: true });
+    });
+    $("quit").addEventListener("click", quit);
+
+    // Après la correction, le champ reste actif mais son contenu est figé.
+    inp.addEventListener("input", function () {
+      if (S.validated) inp.value = S.given[S.i] || "";
+    });
+  }
+
+  function showQuestion() {
+    const q = S.qs[S.i];
+    S.validated = false;
+
+    const inp = $("ans");
+    inp.value = "";
+    inp.classList.remove("done");
+    $("submit").textContent = "Valider";
+    $("idk").hidden = false;
+    $("fb").innerHTML = "";
     $("prompt").textContent = q.prompt;
+    drawBar(); drawCount();
 
     const stage = $("stage");
+    stage.innerHTML = "";
     if (q.flags && q.flagSize === "main") {
       const box = el("div", "flagbox");
       const img = el("img"); img.alt = "Drapeau à identifier";
@@ -235,28 +273,17 @@
     const nq = S.qs[S.i + 1];
     if (nq && nq.flags) { const p = new Image(); p.src = nq.flags[0]; }
 
-    $("form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (S.validated) return;
-      const v = $("ans").value.trim();
-      if (!v) return;
-      finish(L.judge(v, q, INDEX), v);
-    });
-    $("idk").addEventListener("click", function () { finish("ko", ""); });
-    $("quit").addEventListener("click", quit);
-    $("ans").focus({ preventScroll: true });
+    inp.focus({ preventScroll: true });
   }
 
   function flagFailed(q) {
     // Image introuvable (ex. nom de fichier Commons incorrect) : on saute la question.
-    if (q.failed || !S) return;
+    if (!S || q.failed || S.qs[S.i] !== q) return;
     q.failed = true;
-    const idx = S.qs.indexOf(q);
-    if (idx === -1) return;
-    S.qs.splice(idx, 1);
+    S.qs.splice(S.i, 1);
     if (S.qs.length === 0) return renderHome();
     if (S.i >= S.qs.length) return renderEnd();
-    renderQuiz();
+    showQuestion();
   }
 
   function drawBar() {
@@ -278,13 +305,14 @@
   function finish(res, given) {
     const q = S.qs[S.i];
     S.validated = true;
-    S.lock = Date.now() + 200;
+    S.lock = Date.now() + 200; // évite qu'un double appui saute la correction
     S.results[S.i] = res === "ko" ? "ko" : "ok";
     S.given[S.i] = given;
     drawBar(); drawCount();
 
-    $("ans").disabled = true;
-    $("submit").hidden = true;
+    const last = S.i === S.qs.length - 1;
+    $("ans").classList.add("done");
+    $("submit").textContent = last ? "Voir le résultat" : "Suivant";
     $("idk").hidden = true;
 
     const fb = $("fb"); fb.innerHTML = "";
@@ -305,14 +333,8 @@
       loadFlag(im, q.revealFlag, null, function () { im.remove(); });
       box.appendChild(im);
     }
-
-    const actions = el("div", "fb-actions");
-    const last = S.i === S.qs.length - 1;
-    const nextBtn = el("button", "cta", last ? "Voir le résultat" : "Suivant");
-    nextBtn.type = "button"; nextBtn.id = "next";
-    nextBtn.addEventListener("click", next);
-    actions.appendChild(nextBtn);
     if (res === "ko" && given) {
+      const actions = el("div", "fb-actions");
       const fix = el("button", "ghost", "J'avais juste");
       fix.type = "button";
       fix.addEventListener("click", function () {
@@ -321,19 +343,19 @@
         title.textContent = "Compté juste";
         box.className = "fb ok";
         fix.remove();
-        nextBtn.focus();
+        $("ans").focus({ preventScroll: true });
       });
       actions.appendChild(fix);
+      box.appendChild(actions);
     }
-    box.appendChild(actions);
     fb.appendChild(box);
-    setTimeout(function () { nextBtn.focus({ preventScroll: true }); box.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 0);
+    $("ans").focus({ preventScroll: true });
   }
 
   function next() {
     if (!S || !S.validated || Date.now() < S.lock) return;
     S.i++;
-    if (S.i >= S.qs.length) renderEnd(); else renderQuiz();
+    if (S.i >= S.qs.length) renderEnd(); else showQuestion();
   }
 
   function quit() {
@@ -343,9 +365,10 @@
     renderEnd();
   }
 
+  // Filet de sécurité (clavier physique) si le focus n'est plus sur le champ.
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Enter" || !S || !S.validated) return;
-    if (e.target.closest && e.target.closest("button")) return; // le bouton gère son propre clic
+    if (e.target.closest && e.target.closest("button, input")) return;
     e.preventDefault();
     next();
   });
