@@ -117,11 +117,11 @@ h1 {
 .bar .cur { background: var(--ink); }
 
 .prompt { color: var(--muted); font-size: 1.2rem; }
-.stage { margin: .9rem 0 1.5rem; min-height: min(38vh, 16rem); }
+.stage { margin: .9rem 0 1rem; min-height: min(calc(var(--vvh, 100vh) * .34), 16rem); }
 .flagbox { display: inline-block; min-width: 12rem; min-height: 8rem; background: var(--line); border-radius: 3px; vertical-align: top; }
 .flagbox.ready { min-width: 0; min-height: 0; background: none; }
 .flagbox img {
-  display: block; width: auto; height: auto; max-width: 100%; max-height: min(38vh, 16rem);
+  display: block; width: auto; height: auto; max-width: 100%; max-height: min(calc(var(--vvh, 100vh) * .34), 16rem);
   box-shadow: 0 0 0 1px rgba(14,27,61,.18), 0 18px 32px -18px var(--shadow);
   opacity: 0; transition: opacity .2s;
 }
@@ -134,24 +134,37 @@ h1 {
 .namerow img { height: 44px; width: auto; border-radius: 2px; box-shadow: 0 0 0 1px rgba(14,27,61,.18); }
 
 .answer { display: flex; gap: .6rem; }
+.answer .cta { white-space: nowrap; padding-left: 1.1rem; padding-right: 1.1rem; }
 .answer input {
   flex: 1; min-width: 0; font: inherit; font-size: 1.25rem; padding: .75rem 1rem;
   background: var(--surface); color: var(--ink);
   border: 2px solid var(--ink); border-radius: 8px;
 }
-.answer input.done { opacity: .6; }
+.answer input.done { opacity: .75; }
+.answer input.good { border-color: var(--green); }
+.answer input.bad { border-color: var(--red); }
 .answer input::placeholder { color: var(--muted); }
 .idk-row { margin-top: .6rem; }
 .idk-tip { color: var(--muted); font-size: .9rem; }
 
-.fb { margin-top: 1.5rem; border-left: 6px solid var(--line); padding: .1rem 0 .1rem 1rem; }
+.fb-slot { min-height: 4.6rem; margin-bottom: .9rem; }
+.fb {
+  position: relative; display: flex; align-items: center; gap: .9rem;
+  border-left: 6px solid var(--line); padding: .15rem 0 .15rem .9rem;
+}
 .fb.ok { border-color: var(--green); }
 .fb.ko { border-color: var(--red); }
-.fb-title { font-size: 1.4rem; font-weight: 700; line-height: 1.25; }
+.fb-title { font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
 .fb.ok .fb-title { color: var(--green); }
-.fb-extra { color: var(--muted); margin-top: .3rem; }
-.fb-flag { display: block; height: 64px; width: auto; margin-top: .8rem; border-radius: 2px; box-shadow: 0 0 0 1px rgba(14,27,61,.18); }
-.fb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; }
+.fb.ko .fb-title { color: var(--red); }
+.fb-extra { color: var(--muted); font-size: .95rem; line-height: 1.35; margin-top: .15rem; }
+.fb-flag { flex: none; height: 44px; width: auto; max-width: 30%; border-radius: 2px; box-shadow: 0 0 0 1px rgba(14,27,61,.18); }
+.fb .ghost { margin-top: .2rem; padding: .2rem 0; font-size: .95rem; }
+.fb-timer {
+  position: absolute; left: 0; right: 0; bottom: -7px; height: 3px; border-radius: 2px;
+  background: var(--green); transform-origin: left; animation: drain var(--t, 2s) linear forwards;
+}
+@keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ---------- Résultat ---------- */
 .score-big { font-size: clamp(4.5rem, 20vw, 8rem); line-height: .9; font-weight: 800; letter-spacing: -.04em; }
@@ -169,7 +182,6 @@ h1 {
 
 @media (max-width: 30rem) {
   #app { padding: 1.1rem 1rem 3rem; }
-  .answer { flex-direction: column; }
   .swatch { width: 38px; height: 38px; }
   .sw-old { background-size: 19px 19px; }
 }

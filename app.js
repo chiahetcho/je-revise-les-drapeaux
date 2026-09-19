@@ -100,6 +100,7 @@
      ACCUEIL
   ================================================================ */
   function renderHome() {
+    clearTimer();
     S = null;
     const strip = L.shuffle(COUNTRIES).slice(0, 10).map(function (c) {
       return '<img src="' + flagUrl(c.code, 80) + '" alt="">';
@@ -200,6 +201,7 @@
         '<div class="bar" id="bar" aria-hidden="true"></div>' +
         '<p class="prompt" id="prompt"></p>' +
         '<div class="stage" id="stage"></div>' +
+        '<div class="fb-slot" id="fb" aria-live="polite"></div>' +
         '<form class="answer" id="form" autocomplete="off">' +
           '<input id="ans" type="text" placeholder="Ta réponse" aria-label="Ta réponse" ' +
                  'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' +
@@ -207,7 +209,6 @@
         '</form>' +
         '<div class="idk-row"><button type="button" class="ghost" id="idk">Je ne sais pas</button>' +
           '<span class="idk-tip"> ou Entrée avec un champ vide</span></div>' +
-        '<div id="fb" aria-live="polite"></div>' +
       '</section>';
 
     const inp = $("ans");
@@ -242,7 +243,7 @@
 
     const inp = $("ans");
     inp.value = "";
-    inp.classList.remove("done");
+    inp.classList.remove("done", "good", "bad");
     $("submit").textContent = "Valider";
     $("idk").hidden = false;
     $("fb").innerHTML = "";
@@ -311,12 +312,19 @@
     drawBar(); drawCount();
 
     const last = S.i === S.qs.length - 1;
-    $("ans").classList.add("done");
+    const inp = $("ans");
+    inp.classList.add("done", res === "ko" ? "bad" : "good");
     $("submit").textContent = last ? "Voir le résultat" : "Suivant";
     $("idk").hidden = true;
 
     const fb = $("fb"); fb.innerHTML = "";
     const box = el("div", "fb " + (res === "ko" ? "ko" : "ok"));
+    if (q.revealFlag) {
+      const im = el("img", "fb-flag"); im.alt = "Drapeau : " + q.answer;
+      loadFlag(im, q.revealFlag, null, function () { im.remove(); });
+      box.appendChild(im);
+    }
+    const txt = el("div", "fb-text");
     const title = el("p", "fb-title");
     if (res === "ok") {
       const same = L.variants(given).some(function (u) { return L.variants(q.answer).indexOf(u) !== -1; });
@@ -326,15 +334,9 @@
     } else {
       title.textContent = "C'était : " + q.answer;
     }
-    box.appendChild(title);
-    if (q.extra) box.appendChild(el("p", "fb-extra", q.extra));
-    if (q.revealFlag) {
-      const im = el("img", "fb-flag"); im.alt = "Drapeau : " + q.answer;
-      loadFlag(im, q.revealFlag, null, function () { im.remove(); });
-      box.appendChild(im);
-    }
+    txt.appendChild(title);
+    if (q.extra) txt.appendChild(el("p", "fb-extra", q.extra));
     if (res === "ko" && given) {
-      const actions = el("div", "fb-actions");
       const fix = el("button", "ghost", "J'avais juste");
       fix.type = "button";
       fix.addEventListener("click", function () {
@@ -342,23 +344,43 @@
         drawBar(); drawCount();
         title.textContent = "Compté juste";
         box.className = "fb ok";
+        inp.classList.remove("bad"); inp.classList.add("good");
         fix.remove();
-        $("ans").focus({ preventScroll: true });
+        inp.focus({ preventScroll: true });
       });
-      actions.appendChild(fix);
-      box.appendChild(actions);
+      txt.appendChild(fix);
+    }
+    box.appendChild(txt);
+
+    // Bonne réponse (même avec une faute ou un alias) : passage automatique après 2 s.
+    if (res !== "ko") {
+      const ms = 2000;
+      const timer = el("span", "fb-timer");
+      timer.style.setProperty("--t", ms + "ms");
+      box.appendChild(timer);
+      const sess = S, idx = S.i;
+      clearTimer();
+      S.timer = setTimeout(function () {
+        if (S === sess && S.validated && S.i === idx) next();
+      }, ms);
     }
     fb.appendChild(box);
-    $("ans").focus({ preventScroll: true });
+    inp.focus({ preventScroll: true });
+  }
+
+  function clearTimer() {
+    if (S && S.timer) { clearTimeout(S.timer); S.timer = null; }
   }
 
   function next() {
     if (!S || !S.validated || Date.now() < S.lock) return;
+    clearTimer();
     S.i++;
     if (S.i >= S.qs.length) renderEnd(); else showQuestion();
   }
 
   function quit() {
+    clearTimer();
     const answered = S.results.filter(Boolean).length;
     if (answered === 0) return renderHome();
     S.qs = S.qs.slice(0, answered);
@@ -384,6 +406,7 @@
   }
 
   function renderEnd() {
+    clearTimer();
     const total = S.qs.length;
     if (total === 0) return renderHome();
     const good = goodCount();
@@ -436,6 +459,15 @@
       ul.appendChild(li);
     });
   }
+
+  // Hauteur réellement visible (clavier mobile ouvert) : sert à dimensionner le drapeau.
+  function setVvh() {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty("--vvh", h + "px");
+  }
+  setVvh();
+  window.addEventListener("resize", setVvh);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", setVvh);
 
   renderHome();
 })();
