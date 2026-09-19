@@ -11,6 +11,8 @@
   --green: #14804A;
   --focus: #2447E0;
   --shadow: rgba(14, 27, 61, .5);
+  /* Hauteur max du drapeau : s'adapte à la zone visible (clavier mobile ouvert). */
+  --flag-h: max(6rem, min(calc(var(--vvh, 100vh) - 21.5rem), 16rem));
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -41,6 +43,7 @@ body {
   line-height: 1.5;
 }
 #app { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+#app.quiz-mode { padding-top: .75rem; padding-bottom: 0; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 button { font: inherit; color: inherit; cursor: pointer; }
 h1, h2, p { margin: 0; }
@@ -107,27 +110,28 @@ h1 {
 }
 
 /* ---------- Quiz ---------- */
+.quiz-top .ghost { padding: .2rem 0; }
 .quiz-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
 .count { font-weight: 700; font-variant-numeric: tabular-nums; }
 .count small { color: var(--muted); font-weight: 400; margin-left: .6rem; font-size: .95rem; }
-.bar { display: flex; gap: 2px; height: 8px; margin: .75rem 0 2rem; }
+.bar { display: flex; gap: 2px; height: 8px; margin: .4rem 0 .6rem; }
 .bar span { flex: 1; background: var(--line); border-radius: 2px; }
 .bar .ok { background: var(--green); }
 .bar .ko { background: var(--red); }
 .bar .cur { background: var(--ink); }
 
-.prompt { color: var(--muted); font-size: 1.2rem; }
-.stage { margin: .9rem 0 1rem; min-height: min(calc(var(--vvh, 100vh) * .34), 16rem); }
+.prompt { color: var(--muted); font-size: 1.05rem; }
+.stage { margin: .4rem 0 .75rem; min-height: var(--flag-h); }
 .flagbox { display: inline-block; min-width: 12rem; min-height: 8rem; background: var(--line); border-radius: 3px; vertical-align: top; }
 .flagbox.ready { min-width: 0; min-height: 0; background: none; }
 .flagbox img {
-  display: block; width: auto; height: auto; max-width: 100%; max-height: min(calc(var(--vvh, 100vh) * .34), 16rem);
+  display: block; width: auto; height: auto; max-width: 100%; max-height: var(--flag-h);
   box-shadow: 0 0 0 1px rgba(14,27,61,.18), 0 18px 32px -18px var(--shadow);
   opacity: 0; transition: opacity .2s;
 }
 .flagbox.ready img { opacity: 1; }
 .big {
-  font-size: clamp(2rem, 8.5vw, 3.4rem); line-height: 1.05; letter-spacing: -.02em; font-weight: 800;
+  font-size: clamp(1.9rem, 8vw, 3rem); line-height: 1.05; letter-spacing: -.02em; font-weight: 800;
   overflow-wrap: anywhere;
 }
 .namerow { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
@@ -144,24 +148,28 @@ h1 {
 .answer input.good { border-color: var(--green); }
 .answer input.bad { border-color: var(--red); }
 .answer input::placeholder { color: var(--muted); }
-.idk-row { margin-top: .6rem; }
+.idk-row { margin-top: .15rem; }
 .idk-tip { color: var(--muted); font-size: .9rem; }
 
-.fb-slot { min-height: 4.6rem; margin-bottom: .9rem; }
+.fb-slot { height: 5.3rem; margin-bottom: .4rem; display: flex; align-items: center; }
 .fb {
-  position: relative; display: flex; align-items: center; gap: .9rem;
-  border-left: 6px solid var(--line); padding: .15rem 0 .15rem .9rem;
+  position: relative; display: flex; align-items: center; gap: .8rem; width: 100%;
+  border-left: 6px solid var(--line); padding: .1rem 0 .1rem .8rem;
 }
 .fb.ok { border-color: var(--green); }
 .fb.ko { border-color: var(--red); }
-.fb-title { font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
+.fb-text { min-width: 0; flex: 1; }
+.fb-title, .fb-extra {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.fb-title { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
 .fb.ok .fb-title { color: var(--green); }
 .fb.ko .fb-title { color: var(--red); }
-.fb-extra { color: var(--muted); font-size: .95rem; line-height: 1.35; margin-top: .15rem; }
-.fb-flag { flex: none; height: 44px; width: auto; max-width: 30%; border-radius: 2px; box-shadow: 0 0 0 1px rgba(14,27,61,.18); }
-.fb .ghost { margin-top: .2rem; padding: .2rem 0; font-size: .95rem; }
+.fb-extra { color: var(--muted); font-size: .9rem; line-height: 1.3; margin-top: .1rem; }
+.fb-flag { flex: none; height: 40px; width: auto; max-width: 30%; border-radius: 2px; box-shadow: 0 0 0 1px rgba(14,27,61,.18); }
+.fb .ghost { flex: none; align-self: flex-start; margin: 0; padding: .1rem 0; font-size: .9rem; }
 .fb-timer {
-  position: absolute; left: 0; right: 0; bottom: -7px; height: 3px; border-radius: 2px;
+  position: absolute; left: 0; right: 0; bottom: -5px; height: 3px; border-radius: 2px;
   background: var(--green); transform-origin: left; animation: drain var(--t, 2s) linear forwards;
 }
 @keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }

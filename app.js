@@ -100,6 +100,7 @@
      ACCUEIL
   ================================================================ */
   function renderHome() {
+    app.className = "";
     clearTimer();
     S = null;
     const strip = L.shuffle(COUNTRIES).slice(0, 10).map(function (c) {
@@ -192,6 +193,7 @@
   }
 
   function buildShell() {
+    app.className = "quiz-mode";
     app.innerHTML =
       '<section class="quiz" id="quiz">' +
         '<div class="quiz-top">' +
@@ -199,9 +201,9 @@
           '<div class="count" id="count" aria-live="polite"></div>' +
         '</div>' +
         '<div class="bar" id="bar" aria-hidden="true"></div>' +
+        '<div class="fb-slot" id="fb" aria-live="polite"></div>' +
         '<p class="prompt" id="prompt"></p>' +
         '<div class="stage" id="stage"></div>' +
-        '<div class="fb-slot" id="fb" aria-live="polite"></div>' +
         '<form class="answer" id="form" autocomplete="off">' +
           '<input id="ans" type="text" placeholder="Ta réponse" aria-label="Ta réponse" ' +
                  'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">' +
@@ -289,6 +291,7 @@
 
   function drawBar() {
     const bar = $("bar"); bar.innerHTML = "";
+    bar.style.gap = S.qs.length > 50 ? "0" : "2px";
     S.qs.forEach(function (_, i) {
       const s = document.createElement("span");
       if (S.results[i]) s.className = S.results[i];
@@ -348,9 +351,11 @@
         fix.remove();
         inp.focus({ preventScroll: true });
       });
-      txt.appendChild(fix);
+      box.appendChild(txt);
+      box.appendChild(fix);
+    } else {
+      box.appendChild(txt);
     }
-    box.appendChild(txt);
 
     // Bonne réponse (même avec une faute ou un alias) : passage automatique après 2 s.
     if (res !== "ko") {
@@ -406,6 +411,7 @@
   }
 
   function renderEnd() {
+    app.className = "";
     clearTimer();
     const total = S.qs.length;
     if (total === 0) return renderHome();
